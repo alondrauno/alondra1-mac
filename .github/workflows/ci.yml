@@ -1,0 +1,64 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      project: ${{ steps.check.outputs.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: echo "project=$(ls -d *.xcworkspace *.xcodeproj Package.swift 2>/dev/null | head -1 | grep -q . && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  build-and-test:
+    # Skipped until the Xcode project (or Package.swift) is committed at the repository root.
+    needs: detect
+    if: needs.detect.outputs.project == 'true'
+    runs-on: macos-latest
+    env:
+      SCHEME: Alondra1  # change if the shared scheme has another name
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: |
+          set -o pipefail
+          if ! compgen -G "*.xcodeproj" >/dev/null && ! compgen -G "*.xcworkspace" >/dev/null; then
+            swift test
+          else
+            container=$(ls -d *.xcworkspace 2>/dev/null | head -1)
+            if [ -n "$container" ]; then flag="-workspace $container"; else flag="-project $(ls -d *.xcodeproj | head -1)"; fi
+            xcodebuild test $flag -scheme "$SCHEME" -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO
+          fi
+
+  docs-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check relative links in Markdown
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --offline --no-progress './**/*.md'
+          fail: true
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
