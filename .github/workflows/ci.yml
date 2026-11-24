@@ -19,7 +19,7 @@ jobs:
     outputs:
       project: ${{ steps.check.outputs.project }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: check
         run: echo "project=$(ls -d *.xcworkspace *.xcodeproj Package.swift 2>/dev/null | head -1 | grep -q . && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
@@ -31,7 +31,7 @@ jobs:
     env:
       SCHEME: Alondra1  # change if the shared scheme has another name
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build and test
         run: |
           set -o pipefail
@@ -46,7 +46,7 @@ jobs:
   docs-links:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check relative links in Markdown
         uses: lycheeverse/lychee-action@v2
         with:
@@ -56,7 +56,7 @@ jobs:
   secrets-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       # gitleaks CLI (MIT), pinned and checksum-verified. The gitleaks GitHub Action needs a paid license for
